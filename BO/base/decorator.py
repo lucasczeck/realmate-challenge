@@ -1,6 +1,5 @@
 import inspect
 import traceback
-import sentry_sdk
 
 from typing import Callable
 

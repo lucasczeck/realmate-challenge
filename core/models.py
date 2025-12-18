@@ -7,7 +7,7 @@ class Log(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     edited_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     create_timestamp = models.DateTimeField(help_text='Original event create timestamp')
-    edit_timestamp = models.DateTimeField(help_text='Original event edit timestamp')
+    edit_timestamp = models.DateTimeField(help_text='Original event edit timestamp', null=True)
 
     class Meta:
         managed = False
