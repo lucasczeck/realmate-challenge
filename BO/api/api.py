@@ -25,6 +25,13 @@ class Webhook:
         elif type_webhook == 'NEW_MESSAGE':
             response = self.create_message(timestamp, data)
 
+        elif type_webhook == 'CLOSE_CONVERSATION':
+            response = self.close_conversation(timestamp, data)
+
+        else:
+            raise ValidationError("The 'type' field only accepts NEW_CONVERSATION or NEW_MESSAGE or "
+                                  "CLOSE_CONVERSATION.", status_code=422)
+
         return response
 
     @staticmethod
@@ -75,8 +82,13 @@ class Webhook:
         except ValueError:
             raise ValidationError("The 'conversation_id' field must be in UUID v4 format.", status_code=400)
 
-        if not api.models.Conversation.objects.filter(id=conversation_id_uuid).exists():
+        conversation = api.models.Conversation.objects.filter(id=conversation_id_uuid).values().first()
+        if not conversation:
             raise ValidationError("The indicated conversation does not exist.", status_code=422)
+        else:
+            if conversation['status'] == 'CLOSED':
+                raise ValidationError("You are not allowed to add a message to a conversation that has already been"
+                                      " closed.", status_code=422)
 
         if api.models.Message.objects.filter(id=id_uuid).exists():
             raise ValidationError("A message with the indicated ID already exists.", status_code=422)
@@ -86,5 +98,28 @@ class Webhook:
         new_message.save()
 
         response = {'status': 'CREATED', 'id': new_message.id, 'type': 'NEW_MESSAGE'}
+
+        return response
+
+    @staticmethod
+    def close_conversation(timestap, data):
+        if not data.get('id'):
+            raise ValidationError('Data.id not specified', status_code=400)
+
+        try:
+            id_uuid = uuid.UUID(data['id'])
+        except ValueError:
+            raise ValidationError("The 'id' field must be in UUID v4 format.", status_code=400)
+
+        conversation = api.models.Conversation.objects.filter(id=id_uuid).first()
+
+        if not conversation:
+            raise ValidationError("The indicated conversation does not exist.", status_code=422)
+
+        conversation.edit_timestamp = timestap
+        conversation.status = 'CLOSED'
+        conversation.save()
+
+        response = {'status': 'CLOSED', 'id': conversation.id, 'type': 'CLOSE_CONVERSATION'}
 
         return response
