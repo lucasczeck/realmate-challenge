@@ -22,6 +22,9 @@ class Webhook:
         if type_webhook == 'NEW_CONVERSATION':
             response = self.create_conversation(timestamp, data)
 
+        elif type_webhook == 'NEW_MESSAGE':
+            response = self.create_message(timestamp, data)
+
         return response
 
     @staticmethod
@@ -42,5 +45,46 @@ class Webhook:
         new_conversation.save()
 
         response = {'status': 'CREATED', 'id': new_conversation.id, 'type': 'NEW_CONVERSATION'}
+
+        return response
+
+    @staticmethod
+    def create_message(timestamp, data):
+        if not data.get('id'):
+            raise ValidationError('Data.id not specified', status_code=400)
+
+        if not data.get('direction'):
+            raise ValidationError('Data.direction not specified', status_code=400)
+
+        if data['direction'] not in ('RECEIVED', 'SENT'):
+            raise ValidationError("The 'direction' field only accepts RECEIVED or SENT.", status_code=422)
+
+        if not data.get('content'):
+            raise ValidationError('Data.content not specified', status_code=400)
+
+        if not data.get('conversation_id'):
+            raise ValidationError('Data.conversation_id not specified', status_code=400)
+
+        try:
+            id_uuid = uuid.UUID(data['id'])
+        except ValueError:
+            raise ValidationError("The 'id' field must be in UUID v4 format.", status_code=400)
+
+        try:
+            conversation_id_uuid = uuid.UUID(data['conversation_id'])
+        except ValueError:
+            raise ValidationError("The 'conversation_id' field must be in UUID v4 format.", status_code=400)
+
+        if not api.models.Conversation.objects.filter(id=conversation_id_uuid).exists():
+            raise ValidationError("The indicated conversation does not exist.", status_code=422)
+
+        if api.models.Message.objects.filter(id=id_uuid).exists():
+            raise ValidationError("A message with the indicated ID already exists.", status_code=422)
+
+        new_message = api.models.Message(id=id_uuid, create_timestamp=timestamp, conversation_id=conversation_id_uuid,
+                                         direction=data['direction'], content=data['content'])
+        new_message.save()
+
+        response = {'status': 'CREATED', 'id': new_message.id, 'type': 'NEW_MESSAGE'}
 
         return response
