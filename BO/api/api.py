@@ -34,6 +34,10 @@ class Webhook:
         except ValueError:
             raise ValidationError("The 'id' field must be in UUID v4 format.", status_code=400)
 
+        if api.models.Conversation.objects.filter(id=uuid_obj).exists():
+            raise ValidationError("A conversation already exists with that ID; it's not possible to create another "
+                                  "one.", status_code=422)
+
         new_conversation = api.models.Conversation(id=uuid_obj, create_timestamp=timestamp)
         new_conversation.save()
 
