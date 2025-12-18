@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 import uuid
 
 
@@ -12,3 +13,12 @@ class Log(models.Model):
     class Meta:
         managed = False
         abstract = True
+
+    def save(self, *args, **kwargs):
+        if self.created_at is None:
+            self.created_at = timezone.now()
+
+        else:
+            self.edited_at = timezone.now()
+
+        super(Log, self).save(*args, **kwargs)
