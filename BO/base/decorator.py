@@ -47,7 +47,7 @@ class Response:
             if response is not None:
                 try:
                     if not self.return_list:
-                        dict_response['retorno'] = response
+                        dict_response['response'] = response
 
                     elif isinstance(response, dict):
                         dict_response[self.return_list[0]] = response
