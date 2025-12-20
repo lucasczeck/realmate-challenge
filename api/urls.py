@@ -3,5 +3,5 @@ import api.views
 
 
 urlpatterns = [
-    path('webhook', api.views.WebhookView.as_view())
+    path('webhook/', api.views.WebhookView.as_view())
 ]
