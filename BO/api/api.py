@@ -1,5 +1,8 @@
 import uuid
 
+from datetime import datetime
+from django.db.models import Prefetch
+
 import api.models
 
 from BO.base.decorator import Response
@@ -7,7 +10,6 @@ from BO.base.exception import ValidationError
 
 
 class Webhook:
-
     @Response(desc_error='Error processing request')
     def process_webhook(self, type_webhook, timestamp, data):
         if not type_webhook:
@@ -123,3 +125,57 @@ class Webhook:
         response = {'status': 'CLOSED', 'id': conversation.id, 'type': 'CLOSE_CONVERSATION'}
 
         return response
+
+
+class Conversations:
+    @Response(desc_error='Error when searching conversations', return_list=['conversations'])
+    def get_conversations(self, status=None, date=None):
+        conversation_filter = {}
+        if status:
+            if status not in ('OPEN', 'CLOSED'):
+                raise ValidationError('The filtered status does not exist; the only available statuses are OPEN and'
+                                      ' CLOSED.', status_code=422)
+            conversation_filter['status'] = status
+
+        if date:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except:
+                raise ValidationError('The date must be entered in the format YYYY-MM-DD.')
+            conversation_filter['create_timestamp__date'] = date
+
+        conversations = list(api.models.Conversation.objects.filter(**conversation_filter)
+                             .values('id', 'status', 'create_timestamp', 'edit_timestamp'))
+
+        return conversations
+
+    @Response(desc_error='Error when retrieving conversation details', return_list=['conversation'])
+    def get_conversation_detail(self, conversation_id):
+        if not conversation_id:
+            raise ValidationError('Conversation ID not provided.', status_code=400)
+
+        conversation = api.models.Conversation.objects.filter(id=conversation_id) \
+            .prefetch_related(Prefetch("message_set",
+                                       queryset=api.models.Message.objects.order_by("created_at"))).first()
+        if not conversation:
+            raise ValidationError('There is no conversation with the provided ID.', status_code=400)
+
+        print(conversation)
+
+        result = {
+            "id": conversation.id,
+            "created_at": conversation.create_timestamp,
+            "closed_at": conversation.edit_timestamp,
+            "status": conversation.status,
+            "messages": [
+                {
+                    "id": m.id,
+                    "content": m.content,
+                    "direction": m.direction,
+                    "created_at": m.create_timestamp
+                }
+                for m in conversation.message_set.all()
+            ]
+        }
+
+        return result
