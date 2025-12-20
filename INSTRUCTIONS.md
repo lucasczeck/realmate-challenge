@@ -37,7 +37,7 @@ git --version
 Para clonar o repositório, execute o seguinte comando:
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
+git clone https://github.com/lucasczeck/realmate-challenge.git
 cd realmate-challenge
 ```
 
