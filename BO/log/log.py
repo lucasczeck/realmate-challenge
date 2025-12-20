@@ -17,7 +17,7 @@ class Log:
                 referer = request.headers._store['referer'][1]
             except:
                 referer = None
-                
+
             try:
                 log = core.log.models.Log(
                     status_code=response.status_code,
@@ -27,7 +27,7 @@ class Log:
                     ip=request.META.get('REMOTE_ADDR'),
                     ip_externo=ip_externo,
                     path=request.path,
-                    session_key=request.session.session_key,
+                    session_key=request.session.session_key if request.session else None,
                     host=request.META.get('HTTP_HOST'),
                     http_x_encaminhado=request.META.get('HTTP_X_FORWARDED_FOR', None),
                     remote_addr=request.META.get('REMOTE_ADDR'),
